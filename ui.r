@@ -1,3 +1,7 @@
+#################################################
+#               Sentiment Analysis Of 20 Hotels #
+#################################################
+
 library(shiny)
 library(text2vec)
 library(tm)
@@ -16,31 +20,35 @@ library(tools)
 
 shinyUI(fluidPage(
   title = "Sentiment Analysis Of 20 Hotels",
-  titlePanel(title=div("Sentiment Analysis Of 20 Hotels")),
+  titlePanel(title=div(img(src="NGT23030556D_PASSPORT.jpg",align='right'),"Sentiment Analysis Of 20 Hotels")),
   
   # Input in sidepanel:
   sidebarPanel(
     
-    fileInput("file", "Upload your text file"),
+    fileInput("file", "Upload text file"),
     uiOutput('id_var'),
     uiOutput("doc_var"),
-    textInput("stopw", ("Enter your own stopwords and use comma(,) to separate them"), value = "is, above"),
+    textInput("stopw", ("Enter stop words separated by comma(,)"), value = "will,can"),
+    
+    # selectInput("ws", "Weighing Scheme", 
+    #             c("weightTf","weightTfIdf"), selected = "weightTf"), # weightTf, weightTfIdf, weightBin, and weightSMART.
+    #
     htmlOutput("pre_proc1"),
     htmlOutput("pre_proc2"),
     sliderInput("freq", "Minimum Frequency in Wordcloud:", min = 0,  max = 100, value = 2),
     
     sliderInput("max",  "Maximum Number of Words in Wordcloud:", min = 1,  max = 300,  value = 50),  
     
-    numericInput("nodes", "Co-occurrence graph with number of central nodes", 4),
-    numericInput("connection", "The maximum connection number with the central node", 5),
+    numericInput("nodes", "Number of Central Nodes in co-occurrence graph", 4),
+    numericInput("connection", "Number of Max Connection with Central Node", 5),
     
     
-    textInput("concord.word",('If you want concordance for a word, please enter that word'),value = 'great'),
-    checkboxInput("regx","Find regex matches"),
-    sliderInput("window",'Consistency Window',min = 2,max = 100,5),
+    textInput("concord.word",('Enter word for which you want to find concordance'),value = 'good'),
+    checkboxInput("regx","Check for regex match"),
+    sliderInput("window",'Concordance Window',min = 2,max = 100,5),
     
     
-    actionButton(inputId = "apply",label = "Commit Changes", icon("refresh"))
+    actionButton(inputId = "apply",label = "Apply Changes", icon("refresh"))
     
   ),
   
@@ -48,25 +56,29 @@ shinyUI(fluidPage(
   mainPanel( 
     tabsetPanel(type = "tabs",
                 #
-                tabPanel("Overview of 20 Hotel Reviews Dataset",h4(p("See my Data preparation steps below")),
+                tabPanel("Overview & 20 Hotel Reviews Dataset",h4(p("How to use this App")),
                          
-                         p("Manually, I filtered 20 hotels in the excel sheet and extracted data of only Review column into a textpad and saved it as 20_Hotel_Reviews because I built this app in a way that it accepts only a document in txt file format. again, I ensured that each row of the reviews was separated from one another with a new line of character. Also, I have already attached my prepared dataset to be used below. Kind download it under Download text file and then, 
-                           on Browse in left side bar panel and upload the downloaded txt file which has been prepared. immediately the file has been uploaded, it will carry out the data processing in 
-                            backend with default inputs and show the results in different tabs.", align = "justify"),
-                         p("If you wish to modify the input, edit the input in left side bar panel and click on Commit Changes. The outputs in other tabs will be reprocessed.
+                         p("To use this app you need a document corpus in txt file format. Make sure each document is separated from another document with a new line character.
+                           To do Sentiment Analysis Of 20 Hotels in your text corpus, click on Browse in left-sidebar panel and upload the txt file. Once the file is uploaded it will do the computations in 
+                            back-end with default inputs and accordingly results will be displayed in various tabs.", align = "justify"),
+                         p("If you wish to change the input, modify the input in left side-bar panel and click on Apply changes. Accordingly results in other tab will be refreshed
                            ", align = "Justify"),
                          h5("Note"),
-                         p("The changes in output takes effect few seconds after clicking on 'Commit Changes'. This is to allow all the data processing
-                          in backend to complete before displaying the result",
+                         p("You might observe no change in the outputs after clicking 'Apply Changes'. Wait for few seconds. As soon as all the computations
+                           are over in back-end results will be refreshed",
                            align = "justify"),
                          #, height = 280, width = 400
                          br(),
                          h4(p("Download text file")),
                          downloadButton('downloadData1', '20_Hotel_Reviews reviews txt file'),br(),br(),
-                         p("Kindly note that download is not supported with RStudio interface.  Thus use a web-browser to open this App and then download the 20 Hotel Reviews file. Please click on Open in Browser as shown at top left of the browser to open this App.")
-                         #img(src = "NGT23030556D_PASSPORT.jpg")
+                         p("Please note that download will not work with RStudio interface.  So open this app in a web-browser and then download the 20 Hotel Reviews file. For opening this app in web-browser click on \"Open in Browser\" as shown at top left of the browser. Below is Image is Samuel Obetta Shiny R programmer "),
+                         img(src = "NGT23030556D_PASSPORT.jpg")
                 )
                 ,
+                # tabPanel("20 Hotel Reviews dataset", h4(p("Download Sample text file")),
+                #          downloadButton('downloadData1', '20_Hotel_Reviews reviews txt file'),br(),br(),
+                #          p("Please note that download will not work with RStudio interface. Download will work only in web-browsers. So open this app in a web-browser and then download the 20 Hotel Reviews file. For opening this app in web-browser click on \"Open in Browser\" as shown below -"),
+                #          img(src = "NGT23030556D_PASSPORT.jpg")),
                 tabPanel("DTM",
                          verbatimTextOutput("dtmsize"),
                          h4("Sample DTM (Document Term Matrix) "),
@@ -101,9 +113,11 @@ shinyUI(fluidPage(
                 ),
                 tabPanel("Bigram",
                          h4('Collocations Bigrams'),
-                         p('When a corpus contains n word tokens, it can only contain (n-1) bigrams. However, the majority of these bigrams are not interesting. The interesting ones - termed collocations bigrams - comprise
-                                    See the list of all collocations 
-                                    bigrams below (top 100, if collocations bigrams are above 100) from the corpus you uploaded on 
+                         p('If a corpus has n word tokens, then it can have at most (n-1) bigrams. However, most of
+                                    these bigram are uninteresting. The interesting ones - termed collocations bigrams - comprise
+                                    those bigrams whose occurrence in the corpus is way more likely than would be true if the 
+                                    constituent words in the bigram randomly came together. Below is the list of all collocations 
+                                    bigrams (top 100, if collocations bigrams are above 100) from the corpus you uploaded on 
                                     this App',align = "Justify"),
                          DT::dataTableOutput("bi.grams"),
                          h4("Bigram wordcloud"),
@@ -112,7 +126,7 @@ shinyUI(fluidPage(
                 ),
                 tabPanel("Concordance",
                          h4('Concordance'),
-                         p('You can see the local context for words of interest when using Concordance. The mechanism accomplishes this by building a moving window of words before and after every occurrence of the focal word. In the panel on the left side of this app, you will see a list of all concordances for the term you entered. In the left sidebar panel, you can choose to change the concordance window or word of interest.',align = "Justify"),
+                         p('Concordance allows you to see the local context around a word of interest. It does so by building a moving window of words before and after the focal word\'s every instance in the corpus. Below is the list of all instances of concordance in the corpus for your word of interest entered in the left side bar panel of this app. You can change the concordance window or word of interest in the left side bar panel.',align = "Justify"),
                          #verbatimTextOutput("concordance"))
                          DT::dataTableOutput("concordance")),
                 tabPanel("Downloads",
