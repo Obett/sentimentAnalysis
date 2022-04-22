@@ -1,5 +1,5 @@
 #################################################
-#   Sentiment Analysis Of 20 Hotels             #
+#               Topic    Analysis             #
 #################################################
 
 shinyServer(function(input, output,session) {
@@ -317,9 +317,9 @@ output$table <- renderDataTable({
 
 #---------------
 output$downloadData1 <- downloadHandler(
-    filename = function() { "20_Hotel_Reviews.txt" },
+    filename = function() { "Nokia_Lumia_reviews.txt" },
     content = function(file) {
-      writeLines(readLines("data/20_Hotel_Reviews.txt"), file)
+      writeLines(readLines("data/Nokia_Lumia_reviews.txt"), file)
     }
   )
 
