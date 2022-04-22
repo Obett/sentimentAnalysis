@@ -1,502 +1,197 @@
+Skip to content
+Search or jump to…
+Pull requests
+Issues
+Marketplace
+Explore
+ 
+@Obett 
+Obett
+/
+Obett
+Public
+Code
+Pull requests
+Actions
+Projects
+Security
+Insights
+Settings
+Obett/ui.R
+@Obett
+Obett Update ui.R
+Latest commit 4c79b21 10 days ago
+ History
+ 6 contributors
+@aashishkpandey@sudhir-voleti@yogesh1612@Obett@gittian@aashishpandey
+156 lines (132 sloc)  8.42 KB
+   
 #################################################
-#   Sentiment Analysis Of 20 Hotels             #
+#               Sentiment Analysis Of 20 Hotels #
 #################################################
 
-shinyServer(function(input, output,session) {
-  set.seed=2092014   
+library(shiny)
+library(text2vec)
+library(tm)
+library(tokenizers)
+library(wordcloud)
+library(slam)
+library(stringi)
+library(magrittr)
+library(tidytext)
+library(dplyr)
+library(visNetwork)
+library(tidyr)
+library(DT)
+library(stringr)
+library(tools)
+
+shinyUI(fluidPage(
+  title = "Sentiment Analysis Of 20 Hotels",
+  titlePanel(title=div(img(src="UniLogo.PNG",align='right'),"Sentiment Analysis Of 20 Hotels")),
   
-  dataset <- reactive({
-    if (is.null(input$file)) {return(NULL)}
-    else {
-      
-      if(file_ext(input$file$datapath)=="txt"){
-        Review = readLines(input$file$datapath)
-        #colnames(Review) <- c("Hotel.name","Review")
-        Hotel.name=seq(1:length(Review))
-        calib=data.frame(Hotel.name,Review)
-        print(input$file$name)
-        return(calib)}
-    else{
-      Review = read.csv(input$file$datapath ,header=TRUE, sep = ",", stringsAsFactors = F)
-      Review[,1] <- str_to_title(Review[,1])
-      Review[,1] <- make.names(Review[,1], unique=TRUE)
-      Review[,1] <- tolower(Review[,1])
-      Review[,1] <- str_replace_all(Review[,1],"\\.","_")
-      Review<-Review[complete.cases(Review), ]
-      Review <- Review[!(duplicated(Review[,1])), ]
-      rownames(Review) <- Review[,1]
-      
-     # colnames(Review) <- c("Hotel.name","Review")
-      #Hotel.name=seq(1:length(Review))
-      # calib=data.frame(Hotel.name,Review)
-      #print(input$file$name)
-      
-      return(Review)
-      }
-      
-    }
-  })
-  
-  cols <- reactive({colnames(dataset())})
-  
-  output$pre_proc1 <- renderUI({if(is.null(dataset())){
-    return(NULL)
-  }else{
+  # Input in sidepanel:
+  sidebarPanel(
     
-    checkboxInput('html',"Remove HTML tags",value = TRUE)
+    fileInput("file", "Upload text file"),
+    uiOutput('id_var'),
+    uiOutput("doc_var"),
+    textInput("stopw", ("Enter stop words separated by comma(,)"), value = "will,can"),
+    
+    # selectInput("ws", "Weighing Scheme", 
+    #             c("weightTf","weightTfIdf"), selected = "weightTf"), # weightTf, weightTfIdf, weightBin, and weightSMART.
+    #
+    htmlOutput("pre_proc1"),
+    htmlOutput("pre_proc2"),
+    sliderInput("freq", "Minimum Frequency in Wordcloud:", min = 0,  max = 100, value = 2),
+    
+    sliderInput("max",  "Maximum Number of Words in Wordcloud:", min = 1,  max = 300,  value = 50),  
+    
+    numericInput("nodes", "Number of Central Nodes in co-occurrence graph", 4),
+    numericInput("connection", "Number of Max Connection with Central Node", 5),
+    
+    
+    textInput("concord.word",('Enter word for which you want to find concordance'),value = 'good'),
+    checkboxInput("regx","Check for regex match"),
+    sliderInput("window",'Concordance Window',min = 2,max = 100,5),
+    
+    
+    actionButton(inputId = "apply",label = "Apply Changes", icon("refresh"))
+    
+  ),
+  
+  # Main Panel:
+  mainPanel( 
+    tabsetPanel(type = "tabs",
+                #
+                tabPanel("Overview & 20 Hotel Reviews Dataset",h4(p("How to use this App")),
+                         
+                         p("To use this app you need a document corpus in txt file format. Make sure each document is separated from another document with a new line character.
+                           To do Sentiment Analysis Of 20 Hotels in your text corpus, click on Browse in left-sidebar panel and upload the txt file. Once the file is uploaded it will do the computations in 
+                            back-end with default inputs and accordingly results will be displayed in various tabs.", align = "justify"),
+                         p("If you wish to change the input, modify the input in left side-bar panel and click on Apply changes. Accordingly results in other tab will be refreshed
+                           ", align = "Justify"),
+                         h5("Note"),
+                         p("You might observe no change in the outputs after clicking 'Apply Changes'. Wait for few seconds. As soon as all the computations
+                           are over in back-end results will be refreshed",
+                           align = "justify"),
+                         #, height = 280, width = 400
+                         br(),
+                         h4(p("Download text file")),
+                         downloadButton('downloadData1', '20_Hotel_Reviews reviews txt file'),br(),br(),
+                         p("Please note that download will not work with RStudio interface.  So open this app in a web-browser and then download the 20 Hotel Reviews file. For opening this app in web-browser click on \"Open in Browser\" as shown at top left of the browser. Below is Image is Samuel Obetta Shiny R programmer "),
+                         img(src = "NGT23030556D_PASSPORT.jpg")
+                )
+                ,
+                # tabPanel("20 Hotel Reviews dataset", h4(p("Download Sample text file")),
+                #          downloadButton('downloadData1', '20_Hotel_Reviews reviews txt file'),br(),br(),
+                #          p("Please note that download will not work with RStudio interface. Download will work only in web-browsers. So open this app in a web-browser and then download the 20 Hotel Reviews file. For opening this app in web-browser click on \"Open in Browser\" as shown below -"),
+                #          img(src = "UniLogo.PNG")),
+                tabPanel("DTM",
+                         verbatimTextOutput("dtmsize"),
+                         h4("Sample DTM (Document Term Matrix) "),
+                         DT::dataTableOutput("dtm_table"),br(), 
+                         h4("Word Cloud"),
+                         plotOutput("wordcloud",height = 700, width = 700),br(),
+                         #textInput("in",label = "text"),
+                         h4("Weights Distribution of Wordcloud"),
+                         DT::dataTableOutput("dtmsummary1")),
+                # tabPanel("TDM & Word Cloud",
+                #          
+                #          verbatimTextOutput("dtmsummary"),
+                #          br(),
+                #          br(),
+                #          
+                #         ),
+                
+                tabPanel("TF-IDF", 
+                         verbatimTextOutput("idf_size"),
+                         h4("Sample TF-IDF (Term Frequency-Inverse Document Frequency) "),
+                         DT::dataTableOutput("idf_table"),br(), 
+                         h4("Word Cloud"),
+                         plotOutput("idf_wordcloud",height = 700, width = 700),br(),
+                         #textInput("in",label = "text"),
+                         h4("Weights Distribution of Wordcloud"),
+                         DT::dataTableOutput("dtmsummary2")),
+                tabPanel("Term Co-occurrence",
+                         h4("DTM Co-occurrence"),
+                         visNetworkOutput("cog.dtm",height = 700, width = 700),
+                         h4("TF-IDF Co-occurrence"),
+                         visNetworkOutput("cog.idf",height = 700, width = 700)
+                ),
+                tabPanel("Bigram",
+                         h4('Collocations Bigrams'),
+                         p('If a corpus has n word tokens, then it can have at most (n-1) bigrams. However, most of
+                                    these bigram are uninteresting. The interesting ones - termed collocations bigrams - comprise
+                                    those bigrams whose occurrence in the corpus is way more likely than would be true if the 
+                                    constituent words in the bigram randomly came together. Below is the list of all collocations 
+                                    bigrams (top 100, if collocations bigrams are above 100) from the corpus you uploaded on 
+                                    this App',align = "Justify"),
+                         DT::dataTableOutput("bi.grams"),
+                         h4("Bigram wordcloud"),
+                         plotOutput("bi_word_cloud",height=700,width=700),
+                         
+                ),
+                tabPanel("Concordance",
+                         h4('Concordance'),
+                         p('Concordance allows you to see the local context around a word of interest. It does so by building a moving window of words before and after the focal word\'s every instance in the corpus. Below is the list of all instances of concordance in the corpus for your word of interest entered in the left side bar panel of this app. You can change the concordance window or word of interest in the left side bar panel.',align = "Justify"),
+                         #verbatimTextOutput("concordance"))
+                         DT::dataTableOutput("concordance")),
+                tabPanel("Downloads",
+                         h4("Download DTM"),
+                         #h3("-------------"),
+                         verbatimTextOutput("dtm_text"),
+                         downloadButton('download_dtm', 'Download DTM'),br(),
                         
-      }
-  })
-  
-  output$pre_proc2 <- renderUI({if(is.null(dataset())){
-    return(NULL)
-  }else{
-    checkboxInput('num',"Remove Numbers",value = TRUE)
-    
-  }
-  })
-  
-  
-  y_col <- reactive({
-    x <- match(input$x,cols())
-    y_col <- cols()[-x]
-    return(y_col)
-    
-    })
-  
-  output$id_var <- renderUI({
-    print(cols())
-    selectInput("x","Select ID Column",choices = cols())
-  })
-  
-  
-  output$doc_var <- renderUI({
-    selectInput("y","Select Text Column",choices = y_col())
-  })
-  
- 
-  
-  
-  dtm_tcm =  eventReactive(input$apply,{
-    
-    textb = dataset()[,input$y]
-    ids = dataset()[,input$x]
-    
-    dtm.tcm = dtm.tcm.creator(text = textb,
-                              id = ids,
-                              std.clean = TRUE,
-                              std.stop.words = TRUE,
-                              stop.words.additional = unlist(strsplit(input$stopw,",")),
-                              bigram.encoding = TRUE,
-                              # bigram.min.freq = 20,
-                              min.dtm.freq = input$freq,
-                              skip.grams.window = 10,
-                              html_tags=input$html,
-                              numbers = input$num)
-    #if (input$ws == "weightTf") {
-      dtm = as.matrix(dtm.tcm$dtm)  
-      dtm
-      dtm_tcm_obj = list(dtm = dtm)#, tcm = tcm)
-      dtm_tcm_obj
-  #  } 
-    
-    # if (input$ws == "weightTfIdf"){
-    #   model_tfidf = TfIdf$new()
-    #   dtm = round(as.matrix(model_tfidf$fit_transform(dtm.tcm$dtm)),2)
-    #   
-    #   tempd = dtm*0
-    #   tempd[dtm > 0] = 1
-    #   dtm = dtm + tempd
-    # }  
-    # 
-    # # tcm = dtm.tcm$tcm
-    # dtm_tcm_obj = list(dtm = dtm)#, tcm = tcm)
-  })
-  
-
-  
-  
-  dtm_idf =  eventReactive(input$apply,{
-    
-    textb = dataset()[,input$y]
-    ids = dataset()[,input$x]
-    
-    dtm.tcm = dtm.tcm.creator(text = textb,
-                              id = ids,
-                              std.clean = TRUE,
-                              std.stop.words = TRUE,
-                              stop.words.additional = unlist(strsplit(input$stopw,",")),
-                              bigram.encoding = TRUE,
-                              # bigram.min.freq = 20,
-                              min.dtm.freq = input$freq,
-                              skip.grams.window = 10)
-    # if (input$ws == "weightTf") {
-    #   dtm = as.matrix(dtm.tcm$dtm)  
-    # } 
-    
-   # if (input$ws == "weightTfIdf"){
-      model_tfidf = TfIdf$new()
-      dtm = round(as.matrix(model_tfidf$fit_transform(dtm.tcm$dtm)),2)
-      
-      tempd = dtm*0
-      tempd[dtm > 0] = 1
-      dtm = dtm + tempd
-   # }  
-    
-    # tcm = dtm.tcm$tcm
-    dtm_tcm_obj = list(dtm = dtm)#, tcm = tcm)
-    dtm_tcm_obj
-  })
-  
-  
-  
-  
-  ordered_dtm_idf<- reactive({if (is.null(input$file)) {return(NULL)}
-    else{
-      mat1= dtm_idf()$dtm
-      a = colSums(mat1)
-      b = order(-a)     # nice syntax for ordering vector in decr order  
-      mat2 = mat1[,b]
-      return(mat2)
-      
-    }
-    
-  })
-  
-  
-  
-  ordered_dtm <- reactive({if (is.null(input$file)) {return(NULL)}
-    else{
-      mat1= dtm_tcm()$dtm
-      a = colSums(mat1)
-      b = order(-a)     # nice syntax for ordering vector in decr order  
-      mat2 = mat1[,b]
-      return(mat2)
-      
-    }
-    
-  })
-  
-  
-  output$idf_table <- renderDataTable({
-    
-    temp <- ordered_dtm_idf()[1:10,1:10]
-    #  temp <- tem[1:10,1:10]
-    return(temp)
-    
-    # a = colSums(mat1)  # collect colsums into a vector obj a
-    
-    # 
-    # diag(mat2) =  0
-    
-  })
-  
-  
-  
-  output$dtm_table <- renderDataTable({
-    
-    temp <- ordered_dtm()[1:10,1:10]
-    #  temp <- tem[1:10,1:10]
-    return(temp)
-    
-    # a = colSums(mat1)  # collect colsums into a vector obj a
-    
-    # 
-    # diag(mat2) =  0
-    
-  })
-  
-  
-  
-  idfwordcounts = reactive({
-    
-    return(dtm.word.count(dtm_idf()$dtm))
-    
-  }) 
-  
-  
-  wordcounts = reactive({
-    
-    return(dtm.word.count(dtm_tcm()$dtm))
-    
-  }) 
-  
-  
-  
-  output$idf_wordcloud <- renderPlot({
-    
-    if (is.null(input$file)) {return(NULL)}
-    else{
-      tsum = idfwordcounts()
-      tsum = tsum[order(tsum, decreasing = T)]
-      dtm.word.cloud(count = tsum,max.words = input$max,title = 'TF-IDF Wordcloud')
-    }
-    
-    
-  })
-  
-  
-  
-  output$wordcloud <- renderPlot({
-    
-    if (is.null(input$file)) {return(NULL)}
-    else{
-      tsum = wordcounts()
-      tsum = tsum[order(tsum, decreasing = T)]
-      dtm.word.cloud(count = tsum,max.words = input$max,title = 'Term Frequency Wordcloud')
-    }
-    
-    
-  })
-  
-  
-  
-  
-  output$cog.idf <- renderVisNetwork({
-    
-    if (is.null(input$file)|input$apply==0) {return(NULL)}
-    else{
-      distill.cog.tcm(mat1=dtm_idf()$dtm, # input TCM MAT
-                      mattype = "DTM",
-                      title = "COG from TF-IDF Adjacency", # title for the graph
-                      s=input$nodes,    # no. of central nodes
-                      k1 = input$connection)  # No. of Connection with central Nodes
-    }
-    
-    
-  })
-  
-  
-  
-  output$cog.dtm <- renderVisNetwork({
-    
-    if (is.null(input$file)|input$apply==0) {return(NULL)}
-    else{
-      distill.cog.tcm(mat1=dtm_tcm()$dtm, # input TCM MAT
-                      mattype = "DTM",
-                      title = "COG from DTM Adjacency", # title for the graph
-                      s=input$nodes,    # no. of central nodes
-                      k1 = input$connection)  # No. of Connection with central Nodes
-    }
-    
-    
-  })
-  
-  # output$cog.tcm <- renderPlot({
-  #   
-  # distill.cog.tcm(mat1=dtm_tcm()$tcm, # input TCM MAT,
-  #                   mattype = "TCM",
-  #                   title = "TCM from glove algorithm - Graph ", # title for the graph
-  #                   s=input$nodes,    # no. of central nodes
-  #                   k1 = input$connection)  # No. of Connection with central Nodes
-  #   
-  #       })
-  
-  
-  # output$dtmsummary  <- renderPrint({
-  #   if (is.null(input$file)) {return(NULL)}
-  #   else {
-  #     sortedobj = dtm_tcm()$dtm[,order(wordcounts(), decreasing = T)]
-  #     (t(sortedobj[1:10,1:10]))
-  #   }
-  # })
-  
-  output$idf_size  <- renderPrint({
-    if (is.null(input$file)|input$apply==0) {return(NULL)}
-    else {
-      size = dim(t(dtm_idf()$dtm))
-      dtm_size = paste("TF-IDF matrix size is ", size[1]," X ", size[2],". Below are the first 10 docs X top 10 tokens")
-      return(dtm_size)
-    }
-  })
-  
-  
-  output$dtmsize  <- renderPrint({
-    if (is.null(input$file)|input$apply==0) {return(NULL)}
-    else {
-      size = dim(t(dtm_tcm()$dtm))
-      dtm_size = paste("Term Review Matrix (TDM) size is ", size[1]," X ", size[2],". Below are the first 10 docs X top 10 tokens")
-      return(dtm_size)
-    }
-  })
-  
-  
-  output$dtmsummary2  <- renderDataTable({
-    if (is.null(input$file)|input$apply==0) {return(NULL)}
-    else {
-      data.frame(score = idfwordcounts()[order(idfwordcounts(), decreasing = T)][1:input$max])
-    }
-  })
-  
-  
-  
-  output$dtmsummary1  <- renderDataTable({
-    if (is.null(input$file)|input$apply==0) {return(NULL)}
-    else {
-      data.frame(Counts = wordcounts()[order(wordcounts(), decreasing = T)][1:input$max])
-    }
-  })
-  
-  
-  # This is your reactive element.
-  df_reactive <- eventReactive(input$apply,{
-    
-    if (is.null(input$file)|input$apply==0) {return(NULL)}
-    else{
-      a0 = concordance.r(dataset()[,input$y],input$concord.word, input$window,input$regx)
-      a0
-      # a0 %>%
-      #   # Filter if input is anywhere, even in other words.
-      #   filter_all(any_vars(grepl(input$concord.word, ., T, T))) %>% 
-      #   # Replace complete words with same in HTML.
-      #   mutate_all(~ gsub(
-      #     paste(c("\\b(", input$concord.word, ")\\b"), collapse = ""),
-      #     "<span style='background-color:#6ECFEA;'>\\1</span>",
-      #     .,
-      #     TRUE,
-      #     TRUE
-      #   )
-      #   )
-    }
-    
-  })
-  
-  
-  output$concordance = renderDataTable({
-    
-    # a0 = concordance.r(dataset()$Review,input$concord.word, input$window)
-    # concordance = a0
-    # datatable(concordance, escape = F, options = list(dom = "lt"))
-    datatable(df_reactive(), escape = F, options = list(dom = "lt"))
-  })
-  
-  
-  bi_gram <- reactive({
-    if (is.null(input$file)|input$apply==0) {return(NULL)}
-    else{
-      a1 = dataset()[,input$y] %>% split_by_puncts(puncts,.) #N-------------
-      a2 = tibble(phrases = unlist(a1));
-      a0 = bigram.collocation(a2)
-      
-    #  a0 = bigram.collocation(dataset()$Review)
-      a0$coll.ratio <- round(a0$coll.ratio,2)
-      a0 = a0[order(a0$n, decreasing = T),]
-      if (nrow(a0) > 100){
-        a1 = a0[1:100,]
-      } else {
-        a1 = a0
-      }
-      a1
-    }
-    
-    
-  })
-  
-  
-  output$bi.grams = renderDataTable({
-    bi_gram()
-    
-  })
-  
-  output$bi_word_cloud <- renderPlot({
-    
-    if (is.null(input$file)|input$apply==0) {return(NULL)}
-    else{
-      wordcloud(bi_gram()$bigram_united, bi_gram()$n,     # words, their freqs 
-                scale = c(4, 1),     # range of word sizes
-                min.freq = .01,                     # min.freq of words to consider
-                max.words = input$max,       # max #words
-                colors = brewer.pal(8, "Dark2"))
-    }
-    
-  })
-  
-  
-  output$dtm_text <- renderText({
-    size = dim(ordered_dtm())
-    dtm_size = paste("DTM has  ", size[1],"(rows)"," X ", size[2],"(columns)","")
-    
-    
-  })
-  
-  
-  
-  output$tfidf_text <- renderText({
-    size = dim(ordered_dtm_idf())
-    dtm_size = paste("TF-IDF has  ", size[1],"(rows)"," X ", size[2],"(columns)","")
-    
-    
-  })
-  
-  
-  output$bi_text <- renderText({
-    size = dim(bigram_data())
-    dtm_size = paste("Bi-gram corpus has  ", size[1],"(rows)"," X ", size[2],"(columns)","")
-    
-    
-  })
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  output$download_tfidf <- downloadHandler(
-    filename = function() {paste(str_split(input$file$name,"\\.")[[1]][1],"_tfidf.csv",collapse = "") },
-    content = function(file) {
-      
-      new_dtm <- ordered_dtm_idf()
-      write.csv(new_dtm, file, row.names=T)
-      
-      
-    }
+                         
+                         h3("-----------------------------------------------------"),
+                         h4("Download TF-IDF"),
+                         verbatimTextOutput("tfidf_text"),
+                         downloadButton('download_tfidf', 'Download TF-IDF'),br(),
+                         
+                         
+                         h3("-----------------------------------------------------"),
+                         h4("Download Bigram Corpus"),
+                         verbatimTextOutput("bi_text"),
+                         downloadButton("download_bigram","Download Bigram Corpus"))
+                          
+          
+                
+                
+    )
   )
- 
-  output$download_dtm <- downloadHandler(
-    filename = function() {paste(str_split(input$file$name,"\\.")[[1]][1],"_dtm.csv",collapse = "") },
-    content = function(file) {
-      
-      new_dtm <- ordered_dtm()
-      write.csv(new_dtm, file, row.names=T)
-      
-      
-    }
-  )
-  
-  
-  bigram_data <- reactive({
-                bigrammed_corpus = replace_bigram(dataset(),
-                                                  min_freq = 2,
-                                                  stopw_list=unlist(strsplit(input$stopw,","))
-                                                  )
-                return(bigrammed_corpus[,2:3])
-                })
-  
-  
-  
-  
-  
-  
-  
-  
-  output$download_bigram <- downloadHandler(
-    filename = function() { paste(str_split(input$file$name,"\\.")[[1]][1],"_bigram_corpus.csv",collapse = " ") },
-    content = function(file) {
-      write.csv(bigram_data(), file,row.names=FALSE)
-    }
-  )
-  
-  
-  
-  
-  output$downloadData1 <- downloadHandler(
-    filename = function() { "20_Hotel_Reviews.txt" },
-    content = function(file) {
-      writeLines(readLines("data/20_Hotel_Reviews.txt"), file)
-    }
-  )
-  
-})
+)
+)
+© 2022 GitHub, Inc.
+Terms
+Privacy
+Security
+Status
+Docs
+Contact GitHub
+Pricing
+API
+Training
+Blog
+About
+Loading complete
