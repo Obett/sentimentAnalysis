@@ -48,7 +48,7 @@ shinyUI(fluidPage(
     sliderInput("window",'Consistency Window',min = 2,max = 100,5),
     
     
-    actionButton(inputId = "apply",label = "Apply Changes", icon("refresh"))
+    actionButton(inputId = "apply",label = "Commit Changes", icon("refresh"))
     
   ),
   
