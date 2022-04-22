@@ -68,11 +68,11 @@ shinyUI(fluidPage(
                            are over in back-end results will be refreshed",
                            align = "justify"),
                          #, height = 280, width = 400
-                         br(),
+                         verbatimTextOutput("start"),
                          h4(p("Download text file")),
                          downloadButton('downloadData1', '20_Hotel_Reviews reviews txt file'),br(),br(),
                          p("Please note that download will not work with RStudio interface.  So open this app in a web-browser and then download the 20 Hotel Reviews file. For opening this app in web-browser click on \"Open in Browser\" as shown at top left of the browser. Below is Image is Samuel Obetta Shiny R programmer "),
-                         img(src = "NGT23030556D_PASSPORT.jpg")
+                         img(src = "UniLogo.PNG")
                 )
                 ,
                 # tabPanel("20 Hotel Reviews dataset", h4(p("Download Sample text file")),
