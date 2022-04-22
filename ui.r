@@ -58,7 +58,7 @@ shinyUI(fluidPage(
                 #
                 tabPanel("Overview of 20 Hotel Reviews Dataset",h4(p("See my Data preparation steps below")),
                          
-                         p("Manually, I filtered 20 hotels in the excel sheet and extracted data of only Review column into a textpad and saved it as 20_Hotel_Reviews because I built this app in a way that it accepts only a document in txt file format. again, I ensured that each row of the reviews was separated from one another with a new line of character. Also, I have already attached my prepared dataset to be used below. Kind download it under Download text file and then, 
+                         p("Manually, I filtered 20 hotels in the excel sheet and extracted data of only Review column into a textpad and saved it as 20_Hotel_Reviews because I built this app in a way that it accepts only a document in txt file format. Again, I ensured that each row of the reviews was separated from one another with a new line of character. Also, I have already attached my prepared dataset to be used below. Kind download it under Download text file and then, 
                            on Browse in left side bar panel and upload the downloaded txt file which has been prepared. immediately the file has been uploaded, it will carry out the data processing in 
                             backend with default inputs and show the results in different tabs.", align = "justify"),
                          p("If you wish to modify the input, edit the input in left side bar panel and click on Commit Changes. The outputs in other tabs will be reprocessed.
@@ -71,7 +71,7 @@ shinyUI(fluidPage(
                          verbatimTextOutput("start"),
                          h4(p("Download text file")),
                          downloadButton('downloadData1', '20_Hotel_Reviews reviews txt file'),br(),br(),
-                        p("Kindly note that download is not supported with RStudio interface.  Thus use a web-browser to open this App and then download the 20 Hotel Reviews file. Please click on Open in Browser as shown at top left of the browser to open this App.")
+                        p("Kindly note that download is not supported with RStudio interface.  Thus use a web-browser to open this App and then download the 20 Hotel Reviews file. Please click on Open in Browser as shown at top left of the browser to open this App."),
                          img(src = "UniLogo.PNG")
                 )
                 ,
