@@ -1,5 +1,5 @@
 #################################################
-#               Sentiment Analysis Of 20 Hotels #
+#               Basic Text Analysis             #
 #################################################
 
 library(shiny)
@@ -19,8 +19,8 @@ library(stringr)
 library(tools)
 
 shinyUI(fluidPage(
-  title = "Sentiment Analysis Of 20 Hotels",
-  titlePanel(title=div(img(src="UniLogo.PNG",align='right'),"Sentiment Analysis Of 20 Hotels")),
+  title = "Sentiment Analysis of 20 Hotel Reviews",
+  titlePanel(title=div(img(src="UniLogo.PNG",align='right'),"Sentiment Analysis of 20 Hotel Reviews")),
   
   # Input in sidepanel:
   sidebarPanel(
@@ -28,24 +28,24 @@ shinyUI(fluidPage(
     fileInput("file", "Upload text file"),
     uiOutput('id_var'),
     uiOutput("doc_var"),
-    textInput("stopw", ("Enter your own stopwords and use comma(,) to separate them"), value = "is, above"),
+    textInput("stopw", ("Enter stop words separated by comma(,)"), value = "is,above"),
     
     # selectInput("ws", "Weighing Scheme", 
     #             c("weightTf","weightTfIdf"), selected = "weightTf"), # weightTf, weightTfIdf, weightBin, and weightSMART.
     #
     htmlOutput("pre_proc1"),
     htmlOutput("pre_proc2"),
-    sliderInput("freq", "Wordcloud Minimum Frequency:", min = 0,  max = 50, value = 2),
+    sliderInput("freq", "Minimum Frequency in Wordcloud:", min = 0,  max = 100, value = 2),
     
-    sliderInput("max",  "Maximum Number of Words in Wordcloud:", min = 1,  max = 300,  value = 100),  
+    sliderInput("max",  "Maximum Number of Words in Wordcloud:", min = 1,  max = 300,  value = 50),  
     
-    numericInput("nodes", "Co-occurrence graph with number of central nodes", 4),
-    numericInput("connection", "The maximum connection number with the central node", 5),
+    numericInput("nodes", "Number of Central Nodes in co-occurrence graph", 4),
+    numericInput("connection", "Number of Max Connection with Central Node", 5),
     
     
-    textInput("concord.word",('If you want concordance for a word, please type that word here'),value = 'great'),
-    checkboxInput("regx","Find regex matches"),
-    sliderInput("window",'Consistency Window',min = 2,max = 100,5),
+    textInput("concord.word",('Enter word for which you want to find concordance'),value = 'good'),
+    checkboxInput("regx","Check for regex match"),
+    sliderInput("window",'Concordance Window',min = 2,max = 100,5),
     
     
     actionButton(inputId = "apply",label = "Commit Changes", icon("refresh"))
@@ -56,7 +56,7 @@ shinyUI(fluidPage(
   mainPanel( 
     tabsetPanel(type = "tabs",
                 #
-                tabPanel("Overview of 20 Hotel Reviews Dataset",h4(p("See my Data preparation steps below")),
+                tabPanel("Overview of 20 Hotel Reviews Dataset",h4(p("Data preparation steps below")),
                          
                          p("Manually, I filtered 20 hotels in the excel sheet and extracted data of only Review column into a textpad and saved it as 20_Hotel_Reviews because I built this app in a way that it accepts only a document in txt file format. Again, I ensured that each row of the reviews was separated from one another with a new line of character. Also, I have already attached my prepared dataset to be used below. Kind download it under Download text file and then, 
                            on Browse in left side bar panel and upload the downloaded txt file which has been prepared. immediately the file has been uploaded, it will carry out the data processing in 
@@ -68,45 +68,89 @@ shinyUI(fluidPage(
                           in backend to complete before displaying the result",
                            align = "justify"),
                          #, height = 280, width = 400
-                         verbatimTextOutput("start"),
-                         h4(p("Download text file")),
+                         br(),
+                         h4(p("Download My Dataset")),
                          downloadButton('downloadData1', '20_Hotel_Reviews reviews txt file'),br(),br(),
-                        p("Kindly note that download is not supported with RStudio interface.  Thus use a web-browser to open this App and then download the 20 Hotel Reviews file. Please click on Open in Browser as shown at top left of the browser to open this App."),
+                         p("Kindly note that download is not supported with RStudio interface.  Thus use a web-browser to open this App and then download the 20 Hotel Reviews file. Please click on Open in Browser as shown at top left of the browser to open this App."),
                          img(src = "UniLogo.PNG")
                 )
                 ,
-                tabPanel("Data Summary",
-                         h4("Uploaded data size"),
-                         verbatimTextOutput("up_size"),
-                         h4("Sample of uploaded datasest"),
-                         DT::dataTableOutput("samp_data")
-                         ),
-                tabPanel("TDM & Word Cloud",
-                         h4("DTM Size"),
-                         verbatimTextOutput("dtm_size"),
-                         hr(),
-                         h4("Term Document Matrix [1:10,1:10]"),
-                         DT::dataTableOutput("dtmsummary"),
-                         hr(),
+                # tabPanel("Example dataset", h4(p("Download Sample text file")),
+                #          downloadButton('downloadData1', 'Download Nokia Lumia reviews txt file'),br(),br(),
+                #          p("Please note that download will not work with RStudio interface. Download will work only in web-browsers. So open this app in a web-browser and then download the example file. For opening this app in web-browser click on \"Open in Browser\" as shown below -"),
+                #          img(src = "example1.png")),
+                tabPanel("DTM",
+                         verbatimTextOutput("dtmsize"),
+                         h4("Sample DTM (Document Term Matrix) "),
+                         DT::dataTableOutput("dtm_table"),br(), 
                          h4("Word Cloud"),
-                         plotOutput("wordcloud",height = 700, width = 700),
-                         hr(),
+                         plotOutput("wordcloud",height = 700, width = 700),br(),
+                         #textInput("in",label = "text"),
                          h4("Weights Distribution of Wordcloud"),
                          DT::dataTableOutput("dtmsummary1")),
+                # tabPanel("TDM & Word Cloud",
+                #          
+                #          verbatimTextOutput("dtmsummary"),
+                #          br(),
+                #          br(),
+                #          
+                #         ),
                 
-                #tabPanel("Topic Model - Summary",verbatimTextOutput("summary")),
-                tabPanel("Topics Wordcloud",uiOutput("plots2")),
-                tabPanel("Topics Co-occurrence",uiOutput("plots3")),
-                # tabPanel("Topics eta values",tableOutput("summary2")),
+                tabPanel("TF-IDF", 
+                         verbatimTextOutput("idf_size"),
+                         h4("Sample TF-IDF (Term Frequency-Inverse Document Frequency) "),
+                         DT::dataTableOutput("idf_table"),br(), 
+                         h4("Word Cloud"),
+                         plotOutput("idf_wordcloud",height = 700, width = 700),br(),
+                         #textInput("in",label = "text"),
+                         h4("Weights Distribution of Wordcloud"),
+                         DT::dataTableOutput("dtmsummary2")),
+                tabPanel("Term Co-occurrence",
+                         h4("DTM Co-occurrence"),
+                         visNetworkOutput("cog.dtm",height = 700, width = 700),
+                         h4("TF-IDF Co-occurrence"),
+                         visNetworkOutput("cog.idf",height = 700, width = 700)
+                ),
+                tabPanel("Bigram",
+                         h4('Collocations Bigrams'),
+                         p('If a corpus has n word tokens, then it can have at most (n-1) bigrams. However, most of
+                                    these bigram are uninteresting. The interesting ones - termed collocations bigrams - comprise
+                                    those bigrams whose occurrence in the corpus is way more likely than would be true if the 
+                                    constituent words in the bigram randomly came together. Below is the list of all collocations 
+                                    bigrams (top 100, if collocations bigrams are above 100) from the corpus you uploaded on 
+                                    this App',align = "Justify"),
+                         DT::dataTableOutput("bi.grams"),
+                         h4("Bigram wordcloud"),
+                         plotOutput("bi_word_cloud",height=700,width=700),
+                         
+                ),
+                tabPanel("Concordance",
+                         h4('Concordance'),
+                         p('Concordance allows you to see the local context around a word of interest. It does so by building a moving window of words before and after the focal word\'s every instance in the corpus. Below is the list of all instances of concordance in the corpus for your word of interest entered in the left side bar panel of this app. You can change the concordance window or word of interest in the left side bar panel.',align = "Justify"),
+                         #verbatimTextOutput("concordance"))
+                         DT::dataTableOutput("concordance")),
+                tabPanel("Downloads",
+                         h4("Download DTM"),
+                         #h3("-------------"),
+                         verbatimTextOutput("dtm_text"),
+                         downloadButton('download_dtm', 'Download DTM'),br(),
+                        
+                         
+                         h3("-----------------------------------------------------"),
+                         h4("Download TF-IDF"),
+                         verbatimTextOutput("tfidf_text"),
+                         downloadButton('download_tfidf', 'Download TF-IDF'),br(),
+                         
+                         
+                         h3("-----------------------------------------------------"),
+                         h4("Download Bigram Corpus"),
+                         verbatimTextOutput("bi_text"),
+                         downloadButton("download_bigram","Download Bigram Corpus"))
+                          
+          
                 
-                #                         
-                tabPanel("Token-Topic Loadings",h4("Top terms for each topic"), DT::dataTableOutput("score")),
                 
-                tabPanel("Topic Scores as Doc Proportions",br(),br(),
-                         downloadButton('downloadData2', 'Download Topic Proportions file (Works only in browser)'), br(),br(),
-                         dataTableOutput("table"))
-                
-                         )
-           )
-       )
     )
+  )
+)
+)
