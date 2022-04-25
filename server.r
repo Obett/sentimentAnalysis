@@ -493,9 +493,9 @@ shinyServer(function(input, output,session) {
   
   
   output$downloadData1 <- downloadHandler(
-    filename = function() { "Nokia_Lumia_reviews.txt" },
+    filename = function() { "20_Hotel_Reviews.txt" },
     content = function(file) {
-      writeLines(readLines("data/Nokia_Lumia_reviews.txt"), file)
+      writeLines(readLines("data/20_Hotel_Reviews.txt"), file)
     }
   )
   
