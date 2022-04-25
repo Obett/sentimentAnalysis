@@ -548,11 +548,3 @@ replace_bigram <- function(raw_corpus, stopw_list, min_freq = 2){
 # system.time({ bigrammed_corpus = replace_bigram(speech, min_freq = 2,stopw_list = stopw_list) }) # 0.66 secs
 # bigrammed_corpus[1:3,]
 # 
-
-
-
-
-
-
-
-
